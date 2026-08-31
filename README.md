@@ -71,8 +71,8 @@ Depois disso, use as ferramentas normalmente (Claude Desktop e navegadores no ma
 | `prismon doctor` | diagnóstico do ambiente, com auto-correção de estados degradados |
 | `prismon config` | altera a virtual key salva |
 | `prismon update` | atualiza para a última versão agora (`--check` apenas verifica) |
-| `prismon updater` | controla o auto-update de hora em hora (`install`/`status`/`uninstall`) |
-| `prismon service` | controla o serviço em segundo plano (`install`/`start`/`stop`/`status`/`uninstall`) |
+| `prismon updater` | auto-update de hora em hora (`install`/`status`/`uninstall`; `prismon` e `doctor` religam se estiver off) |
+| `prismon service` | serviço em segundo plano (`install`/`start`/`stop`/`status`); `uninstall` remove o CLI |
 | `prismon version` | mostra a versão instalada |
 | `prismon help` | mostra o uso |
 
