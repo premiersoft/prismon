@@ -38,6 +38,16 @@ irm https://raw.githubusercontent.com/premiersoft/prismon/main/install.ps1 | iex
 
 Depois rode `prismon` nesse terminal: ele pede a virtual key, instala a CA no store do usuário (confirme o diálogo do Windows), sobe o proxy como serviço de login e liga o proxy de sistema (WinINET) para desktop e navegador que respeitam o proxy do Windows. Não precisa deixar o terminal aberto. Use `claude`, `codex`, `grok`, `agy` ou `gemini` em qualquer terminal novo. No Windows, Claude Code (CLI, via wrapper), Codex CLI, Grok CLI, Antigravity (`agy`), Claude Desktop, Claude Web, ChatGPT Web (visitante), Gemini Web e Lovable Web estão homologados — feche o app ou o navegador por completo (Claude Desktop pela bandeja), reabra e envie uma mensagem; só abrir não captura. A primeira execução pede UAC para instalar a CA no store da máquina (necessário para o Claude Desktop da Microsoft Store). Apps com certificate pinning ou que ignoram o proxy do SO continuam fora.
 
+### Windows — instalação corporativa (MSI, Intune/SCCM)
+
+Cada release publica também `prismon_<versão>_windows_amd64.msi`, um instalador por máquina para distribuição silenciosa. Quem administra a organização no Prismon gera um token de enrollment na tela Guardian (aba "Instalação silenciosa") e o TI instala:
+
+```powershell
+msiexec /i prismon_<versão>_windows_amd64.msi /qn GATEWAY_URL=https://gateway.prismon.ai ENROLLMENT_TOKEN=pe-...
+```
+
+O MSI coloca o `prismon.exe` em `%ProgramFiles%\Prismon`, confia a CA no store da máquina e registra um Active Setup: no próximo logon de cada usuário o `prismon setup --unattended` roda sozinho, troca o token por uma virtual key da máquina e sobe o proxy sem perguntar nada. A atualização chega pela distribuição do TI (o binário em Program Files não se atualiza sozinho); `msiexec /x` remove tudo, inclusive o que foi criado por usuário. Detalhes das propriedades e do comportamento em `dev/cli/WINDOWS.md` no repositório principal.
+
 ### Já instalou por Homebrew?
 
 O tap `leozanchett/prismon` foi descontinuado e está congelado numa versão antiga: `brew upgrade prismon` não traz mais atualizações. Instalação por brew também não participa do auto-update — o binário fica no Cellar, que o `prismon update` não substitui, e o CLI recusa a atualização em vez de deixar o terminal numa versão e o serviço em outra.
