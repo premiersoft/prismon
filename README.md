@@ -1,89 +1,43 @@
-# Prismon CLI
+# Prismon Guardian (CLI)
 
 Proxy HTTPS local para auditar chamadas de ferramentas LLM (desktop, web e CLIs de terminal) com guardrails e observabilidade centralizados.
 
 ## Instalação
 
-### macOS / Linux
+A instalação é feita pelo TI, por máquina, via MDM (Intune, SCCM ou equivalente). Não há instalação manual nem auto-update: o MSI é o único caminho suportado e a versão nova chega pela distribuição do TI.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/premiersoft/prismon/main/install.sh | sh
-```
+### Windows (MSI, Intune/SCCM)
 
-- Valida o sha256 do release antes de instalar
-- Instala em `~/.local/bin` (override: `PRISMON_INSTALL_DIR`) e adiciona esse diretório ao PATH do seu shell
-- Versão específica: `PRISMON_VERSION=0.4.0 sh install.sh`
-
-O instalador roda num processo filho e não altera o PATH do terminal que o chamou. Para usar `prismon` na mesma janela, rode o comando que ele imprime no final:
-
-```bash
-export PATH="$HOME/.local/bin:$PATH" && prismon
-```
-
-Em terminais abertos depois da instalação basta `prismon`.
-
-É o mesmo layout que o auto-update usa, então o CLI passa a se manter atualizado sozinho.
-
-### Windows (Path A — CLIs no terminal)
-
-No PowerShell:
+Cada release em `https://github.com/premiersoft/prismon/releases` publica `prismon_<versão>_windows_amd64.msi` e `prismon_<versão>_checksums.txt` (confira o SHA-256 antes de subir o pacote). Quem administra a organização no Prismon gera um token de enrollment na tela Guardian (aba "Instalação"), que também entrega o comando pronto para colar no app Win32 do Intune:
 
 ```powershell
-irm https://raw.githubusercontent.com/premiersoft/prismon/main/install.ps1 | iex
+msiexec /i prismon_<versão>_windows_amd64.msi /qn /norestart REBOOT=ReallySuppress GATEWAY_URL=https://gateway.prismon.ai ENROLLMENT_TOKEN=pe-...
 ```
 
-- Valida o sha256 do release antes de instalar
-- Instala em `%LOCALAPPDATA%\prismon` e adiciona esse diretório ao PATH do usuário
-- Versão específica: `$env:PRISMON_VERSION='0.4.0'; irm ... | iex`
+Propriedades: `GATEWAY_URL` (obrigatória), `ENROLLMENT_TOKEN` (token `pe-…` da tela Guardian) ou, como alternativa, `VIRTUAL_KEY` com uma key pronta. Detecção no Intune: `HKLM\SOFTWARE\Prismon`, valor `Version`, igual à versão do MSI. Ninguém precisa estar logado.
 
-Depois rode `prismon` nesse terminal: ele pede a virtual key, instala a CA no store do usuário (confirme o diálogo do Windows), sobe o proxy como serviço de login e liga o proxy de sistema (WinINET) para desktop e navegador que respeitam o proxy do Windows. Não precisa deixar o terminal aberto. Use `claude`, `codex`, `grok`, `agy` ou `gemini` em qualquer terminal novo. No Windows, Claude Code (CLI, via wrapper), Codex CLI, Grok CLI, Antigravity (`agy`), Claude Desktop, Claude Web, ChatGPT Web (visitante), Gemini Web e Lovable Web estão homologados — feche o app ou o navegador por completo (Claude Desktop pela bandeja), reabra e envie uma mensagem; só abrir não captura. A primeira execução pede UAC para instalar a CA no store da máquina (necessário para o Claude Desktop da Microsoft Store). Apps com certificate pinning ou que ignoram o proxy do SO continuam fora.
+O MSI coloca o `prismon.exe` em `%ProgramFiles%\Prismon`, confia a CA no store da máquina e registra um Active Setup: no próximo logon de cada usuário o `prismon setup --unattended` roda sozinho, troca o token por uma virtual key da máquina e sobe o proxy sem perguntar nada. Para atualizar, publique o MSI novo com supersedência, sem desinstalar o anterior. Para remover, retire o app do dispositivo no Intune ou rode `msiexec /x {ProductCode}`: sai tudo, inclusive o que foi criado por usuário.
 
-### Windows — instalação corporativa (MSI, Intune/SCCM)
+### macOS e Linux
 
-Cada release publica também `prismon_<versão>_windows_amd64.msi`, um instalador por máquina para distribuição silenciosa. Quem administra a organização no Prismon gera um token de enrollment na tela Guardian (aba "Instalação silenciosa") e o TI instala:
-
-```powershell
-msiexec /i prismon_<versão>_windows_amd64.msi /qn GATEWAY_URL=https://gateway.prismon.ai ENROLLMENT_TOKEN=pe-...
-```
-
-O MSI coloca o `prismon.exe` em `%ProgramFiles%\Prismon`, confia a CA no store da máquina e registra um Active Setup: no próximo logon de cada usuário o `prismon setup --unattended` roda sozinho, troca o token por uma virtual key da máquina e sobe o proxy sem perguntar nada. A atualização chega pela distribuição do TI (o binário em Program Files não se atualiza sozinho); `msiexec /x` remove tudo, inclusive o que foi criado por usuário. Detalhes das propriedades e do comportamento em `dev/cli/WINDOWS.md` no repositório principal.
-
-### Já instalou por Homebrew?
-
-O tap `leozanchett/prismon` foi descontinuado e está congelado numa versão antiga: `brew upgrade prismon` não traz mais atualizações. Instalação por brew também não participa do auto-update — o binário fica no Cellar, que o `prismon update` não substitui, e o CLI recusa a atualização em vez de deixar o terminal numa versão e o serviço em outra.
-
-Para migrar:
-
-```bash
-brew uninstall prismon
-curl -fsSL https://raw.githubusercontent.com/premiersoft/prismon/main/install.sh | sh
-prismon
-```
+Sem pacote de distribuição por enquanto. Instalações antigas feitas por script continuam funcionando, mas não recebem mais atualização automática.
 
 ## Uso
 
-```bash
-prismon   # primeira execução: configura a virtual key, instala a CA local e os aliases de CLIs
-```
-
-No macOS e no Windows o proxy passa a rodar como serviço de login — sobe sozinho a cada login, sem terminal aberto — e o auto-update é ativado. No Windows os CLIs entram pelos wrappers e o desktop/web entra pelo proxy de sistema (WinINET/WinHTTP), quando o app respeita o proxy do SO.
-
-Depois disso, use as ferramentas normalmente (Claude Desktop e navegadores no macOS e no Windows; Claude Code, grok, codex, agy e gemini no terminal) — o tráfego LLM é interceptado, avaliado pelos guardrails e registrado.
+Depois do logon o proxy já está ativo como serviço de login. Use as ferramentas normalmente (Claude Desktop e navegadores; Claude Code, `codex`, `grok`, `agy` e `gemini` no terminal): o tráfego LLM é interceptado, avaliado pelos guardrails e registrado. Feche o app ou o navegador por completo e reabra depois do primeiro logon; só abrir não captura.
 
 ## Comandos
 
+Rode num PowerShell novo depois do logon do usuário.
+
 | Comando | Descrição |
 |---|---|
-| `prismon` | configura o CLI e ativa o serviço em segundo plano e o auto-update |
-| `prismon status` | snapshot da sessão ativa (status, capturas, uptime, totais) |
-| `prismon matrix` | lista os apps e CLIs de IA homologados |
-| `prismon stop` | para o serviço (ele volta no próximo login) |
-| `prismon doctor` | diagnóstico do ambiente, com auto-correção de estados degradados |
-| `prismon config` | altera a virtual key salva |
-| `prismon update` | atualiza para a última versão agora (`--check` apenas verifica) |
-| `prismon updater` | auto-update de hora em hora (`install`/`status`/`uninstall`; `prismon` e `doctor` religam se estiver off) |
-| `prismon service` | serviço em segundo plano (`install`/`start`/`stop`/`status`); `uninstall` remove o CLI |
-| `prismon version` | mostra a versão instalada |
+| `prismon status` | confirma se o proxy está ON depois do logon (capturas, uptime, totais) |
+| `prismon doctor` | diagnostica e repara a instalação (certificado, serviço de login, wrappers); `--export` salva relatório para suporte |
+| `prismon matrix` | lista os apps e CLIs de IA homologados nesta instalação |
+| `prismon version` | mostra a versão instalada; deve bater com o MSI no Intune |
+| `prismon stop` | para o proxy e devolve o proxy de sistema; volta no próximo logon |
+| `prismon setup --unattended` | repete o setup silencioso se o enrollment falhou, sem esperar o próximo logon |
 | `prismon help` | mostra o uso |
 
-Código-fonte: privado (monorepo). Este repositório contém apenas os binários publicados e o instalador.
+Código-fonte: privado (monorepo). Este repositório contém apenas os binários e o MSI publicados.
