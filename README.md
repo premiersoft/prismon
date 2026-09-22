@@ -8,13 +8,13 @@ A instalação é feita pelo TI, por máquina, via MDM (Intune, SCCM ou equivale
 
 ### Windows (MSI, Intune/SCCM)
 
-Cada release em `https://github.com/premiersoft/prismon/releases` publica `prismon_<versão>_windows_amd64.msi` e `prismon_<versão>_checksums.txt` (confira o SHA-256 antes de subir o pacote). Quem administra a organização no Prismon gera um token de enrollment na tela Guardian (aba "Instalação"), que também entrega o comando pronto para colar no app Win32 do Intune:
+Cada release em `https://github.com/premiersoft/prismon/releases` publica `prismon_<versão>_windows_amd64.msi`, `prismon_<versão>_windows_amd64.intunewin` e `prismon_<versão>_checksums.txt` (confira o SHA-256 antes de subir o pacote). Para **Windows app (Win32)** no Intune, envie diretamente o `.intunewin`: ele já contém o MSI e `uninstall.ps1`. O MSI continua disponível para outros canais de distribuição. Quem administra a organização no Prismon gera um token de enrollment na tela Guardian (aba "Instalação"), que também entrega o comando pronto para colar no app Win32 do Intune:
 
 ```powershell
 msiexec /i prismon_<versão>_windows_amd64.msi /qn /norestart REBOOT=ReallySuppress GATEWAY_URL=https://gateway.prismon.ai ENROLLMENT_TOKEN=pe-...
 ```
 
-Propriedades: `GATEWAY_URL` (obrigatória), `ENROLLMENT_TOKEN` (token `pe-…` da tela Guardian) ou, como alternativa, `VIRTUAL_KEY` com uma key pronta. Detecção no Intune: `HKLM\SOFTWARE\Prismon`, valor `Version`, igual à versão do MSI. Ninguém precisa estar logado.
+Propriedades: `GATEWAY_URL` (obrigatória), `ENROLLMENT_TOKEN` (token `pe-…` da tela Guardian) ou, como alternativa, `VIRTUAL_KEY` com uma key pronta. O pacote público não contém token nem credenciais; essas propriedades continuam no comando de instalação configurado pelo TI. Detecção no Intune: `HKLM\SOFTWARE\Prismon`, valor `Version`, comparação de versão `>=` à versão do MSI, aplicativo de 64 bits. Ninguém precisa estar logado. Comando de desinstalação do app Win32: `powershell -NoProfile -ExecutionPolicy Bypass -File uninstall.ps1`.
 
 O MSI coloca o `prismon.exe` em `%ProgramFiles%\Prismon`, confia a CA no store da máquina e registra um Active Setup: no próximo logon de cada usuário o `prismon setup --unattended` roda sozinho, troca o token por uma virtual key da máquina e sobe o proxy sem perguntar nada. Para atualizar, publique o MSI novo com supersedência, sem desinstalar o anterior. Para remover, retire o app do dispositivo no Intune ou rode `msiexec /x {ProductCode}`: sai tudo, inclusive o que foi criado por usuário.
 
