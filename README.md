@@ -8,7 +8,7 @@ Proxy HTTPS local para auditar chamadas de ferramentas LLM (desktop, web e CLIs 
 
 ## Instalação
 
-A instalação é feita pelo TI, por máquina, via MDM (Intune, SCCM ou equivalente). Não há instalação manual nem auto-update: o MSI (Windows) e o PKG (macOS) são os únicos caminhos suportados e a versão nova chega pela distribuição do TI.
+A instalação é feita por máquina, com o MSI (Windows) ou o PKG (macOS). O caminho recomendado é o MDM (Intune, SCCM ou equivalente), que entrega a versão nova, reinstala e remove o Guardian em toda a frota. Para uma máquina avulsa, veja [Instalação manual](#instalação-manual-máquina-avulsa). Não há auto-update.
 
 Cada release em `https://github.com/premiersoft/prismon/releases` publica os pacotes e `prismon_<versão>_checksums.txt`. Confira o SHA-256 antes de subir o pacote no MDM. Quem administra a organização no Prismon gera um token de enrollment na tela Guardian (aba "Instalação"); a própria aba entrega o comando do Windows e os perfis do macOS já preenchidos. Os pacotes públicos não contêm token nem credenciais.
 
@@ -42,6 +42,15 @@ Em Mac onde o usuário não é administrador, o macOS não deixa trocar o proxy 
 
 - **Atualizar:** publique o pacote novo como outro app, com assignment próprio, e retire o Required do app anterior. O pacote substitui a instalação anterior sozinho.
 - **Remover:** o tipo `macOS app (PKG)` não tem assignment de Uninstall. Publique o [`uninstall.sh`](uninstall.sh) deste repositório como shell script do Intune (roda como root). Ele preserva o `~/.prismon` de cada perfil; `uninstall.sh --purge` apaga também.
+
+### Instalação manual (máquina avulsa)
+
+Para uma máquina fora do MDM, com uma conta de administrador nela. O token de enrollment sai da aba "Instalação", como no MDM.
+
+- **Windows:** copie o MSI para `C:\Temp` e rode, num Prompt de Comando ou PowerShell elevado, o comando que a janela do token entrega (o mesmo `msiexec` acima, com `GATEWAY_URL` e `ENROLLMENT_TOKEN`). Só o duplo clique no MSI não basta: sem o token, o Guardian instala, mas não se registra. Quem já está logado é configurado na hora.
+- **macOS:** no lugar do perfil com o token, grave a configuração de máquina com o comando que a janela do token entrega em "Instalar em um Mac sem o Intune", que cria `/Library/Application Support/Prismon/config.json` com `gatewayUrl` e `enrollmentToken`. Se a organização tem certificado próprio (necessário no macOS 15 ou superior), abra o `.cer` no Acesso às Chaves, adicione ao keychain Sistema e marque Sempre Confiar. Depois instale o pacote com duplo clique ou `sudo installer -pkg prismon_<versão>_darwin_universal.pkg -target /`. Sem o perfil do MDM, o Guardian não recebe o e-mail do usuário: atribua o usuário na aba Máquinas.
+
+Sem o MDM, o Guardian não se atualiza nem é reinstalado sozinho. A cada versão nova, instale o pacote novo do mesmo jeito; o token fica gravado na máquina e não precisa ir de novo (no Windows, `msiexec /i <msi novo> /qn` elevado). No macOS, o perfil de Itens de Início de Sessão só instala por MDM, então o usuário consegue desligar o Guardian nos Ajustes do Sistema. Para remover, use Configurações › Aplicativos no Windows ou o [`uninstall.sh`](uninstall.sh) com `sudo` no macOS.
 
 ### Linux
 
